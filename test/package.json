@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "scripts": {
+    "test": "TEST_BROWSER_DRIVER=chrome METEOR_PACKAGE_DIRS=.. meteor test-packages --once --driver-package meteortesting:mocha ../"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.3.4",
+    "graphql": "^14.5.8",
+    "graphql-tools": "^4.0.6",
+    "meteor-node-stubs": "^0.4.1"
+  },
+  "devDependencies": {
+    "chromedriver": "^78.0.1",
+    "selenium-webdriver": "^3.6.0"
+  }
+}
