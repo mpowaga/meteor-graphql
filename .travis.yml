@@ -21,6 +21,9 @@ cache:
     - ~/.npm
     - "node_modules"
 
+notifications:
+  email: false
+
 script:
   - cd test
   - meteor npm install
