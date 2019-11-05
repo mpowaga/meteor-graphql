@@ -1,6 +1,6 @@
 import { checkNpmVersions } from 'meteor/tmeasday:check-npm-versions';
 import {
-  makeExecutableSchema as makeExecutableSchema_
+  makeExecutableSchema as makeExecutableSchema_,
 } from 'graphql-tools';
 
 checkNpmVersions({
@@ -8,6 +8,7 @@ checkNpmVersions({
   'graphql-tools': '4.0.x',
 }, 'mpowaga:graphql');
 
+// eslint-disable-next-line import/prefer-default-export
 export function makeExecutableSchema(options, cursorDirective) {
   return makeExecutableSchema_({
     ...options,

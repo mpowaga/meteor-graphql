@@ -1,9 +1,11 @@
+/* global Package, Npm */
+
 Package.describe({
   name: 'mpowaga:graphql',
   version: '0.0.1',
   summary: '',
   git: '',
-  documentation: 'README.md'
+  documentation: 'README.md',
 });
 
 Package.onUse(function(api) {
@@ -16,8 +18,8 @@ Package.onUse(function(api) {
 
 Package.onTest(function(api) {
   Npm.depends({
-    'chai': '4.2.0',
-    'sinon': '7.5.0',
+    chai: '4.2.0',
+    sinon: '7.5.0',
   });
   api.use('ecmascript');
   api.use('meteortesting:mocha');

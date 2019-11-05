@@ -1,0 +1,10 @@
+{
+  "extends": "@meteorjs/eslint-config-meteor",
+  "rules": {
+    "import/no-unresolved": 0,
+    "max-classes-per-file": 0,
+    "no-underscore-dangle": 0,
+    "no-unused-expressions": 0,
+    "implicit-arrow-linebreak": 0
+  }
+}

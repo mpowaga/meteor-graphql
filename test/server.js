@@ -1,4 +1,5 @@
-import { MeteorGraphQLServer } from 'meteor/mpowaga:graphql';
+import { Meteor } from 'meteor/meteor';
+import MeteorGraphQLServer from 'meteor/mpowaga:graphql';
 import {
   Fruits,
   typeDefs,
@@ -9,10 +10,11 @@ Meteor.methods({
   'test.resetDatabase': () => {
     [
       Fruits,
-    ].forEach(collection => collection.remove({}));
-  }
+    ].forEach((collection) => collection.remove({}));
+  },
 });
 
+// eslint-disable-next-line no-new
 new MeteorGraphQLServer({
   typeDefs,
   resolvers,

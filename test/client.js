@@ -1,8 +1,11 @@
+/* global describe, it, beforeEach */
+
+import { Meteor } from 'meteor/meteor';
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { Tracker } from 'meteor/tracker';
 import { _ } from 'meteor/underscore';
-import { MeteorGraphQLClient } from 'meteor/mpowaga:graphql';
+import MeteorGraphQLClient from 'meteor/mpowaga:graphql';
 import { typeDefs, resolvers, Fruits } from './index';
 
 describe('MeteorGraphQLClient', function () {
@@ -35,7 +38,7 @@ describe('MeteorGraphQLClient', function () {
   it('can query mongo cursor', async () => {
     const name = 'banana';
     const _id = Fruits.insert({ name });
-    const result = await client.query(`{ allFruits { _id name } }`);
+    const result = await client.query('{ allFruits { _id name } }');
     expect(result.errors).to.be.undefined;
     expect(result.data.allFruits).to.eql([{ _id, name }]);
   });
@@ -48,33 +51,13 @@ describe('MeteorGraphQLClient', function () {
           name
         }
       }
-    `
+    `;
     const name = 'banana';
     const subscription = client.subscribe(FRUITS, {
-      selection: [name, 'apple']
+      selection: [name, 'apple'],
     });
     const spy = sinon.spy();
     let _id;
-
-    const insert = _.once(() => {
-      _id = Fruits.insert({ name });
-      setTimeout(insertNotSelected, 0);
-    });
-    const insertNotSelected = _.once(() => {
-      Fruits.insert({ name: 'avocado' });
-      setTimeout(remove, 0);
-    });
-    const remove = _.once(() => {
-      Fruits.remove(_id);
-      setTimeout(finish, 0);
-    });
-
-    Tracker.autorun(async () => {
-      if (subscription.ready()) {
-        spy(await subscription.result());
-        Tracker.nonreactive(() => insert());
-      }
-    });
 
     function finish() {
       subscription.stop();
@@ -84,6 +67,23 @@ describe('MeteorGraphQLClient', function () {
       expect(spy.callCount).to.equal(3);
       done();
     }
+
+    const ready = _.once(() => {
+      _id = Fruits.insert({ name });
+      setTimeout(() => {
+        Fruits.insert({ name: 'avocado' });
+        setTimeout(() => {
+          Fruits.remove(_id);
+          setTimeout(finish, 0);
+        });
+      }, 0);
+    });
+
+    Tracker.autorun(async () => {
+      if (subscription.ready()) {
+        spy(await subscription.result());
+        Tracker.nonreactive(() => ready());
+      }
+    });
   });
 });
-

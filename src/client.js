@@ -4,6 +4,7 @@ import { SchemaDirectiveVisitor } from 'graphql-tools';
 import { makeExecutableSchema } from './index';
 
 class CursorDirective extends SchemaDirectiveVisitor {
+  // eslint-disable-next-line class-methods-use-this
   visitFieldDefinition() {}
 }
 
@@ -29,12 +30,12 @@ class Subscription {
       this._query,
       undefined, // rootValue
       undefined, // contextValue
-      this._variables
+      this._variables,
     );
   }
 }
 
-export class MeteorGraphQLClient {
+export default class MeteorGraphQLClient {
   constructor(options) {
     this._schema = makeExecutableSchema(options, CursorDirective);
   }
@@ -47,11 +48,11 @@ export class MeteorGraphQLClient {
     });
   }
 
-  query(query, variables) {
-    return new Promise((resolve, reject) => {
-      Meteor.call('/graphql', { query, variables }, (err, result) => {
-        return err ? reject(err) : resolve(result);
-      });
-    });
-  }
+  query = (query, variables) => new Promise((resolve, reject) =>
+    Meteor.call('/graphql', { query, variables }, (err, result) => {
+      if (err) {
+        return reject(err);
+      }
+      return resolve(result);
+    }))
 }

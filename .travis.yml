@@ -25,6 +25,5 @@ notifications:
   email: false
 
 script:
-  - cd test
   - meteor npm install
-  - TEST_BROWSER_DRIVER=chrome meteor npm test -- --once
+  - meteor npm test

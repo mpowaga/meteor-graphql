@@ -1,11 +1,14 @@
+import { Meteor } from 'meteor/meteor';
 import { graphql } from 'graphql';
 import { SchemaDirectiveVisitor } from 'graphql-tools';
 import { makeExecutableSchema } from './index';
 
 class CursorDirective extends SchemaDirectiveVisitor {
+  // eslint-disable-next-line class-methods-use-this
   visitFieldDefinition(field) {
     const { resolve } = field;
 
+    // eslint-disable-next-line no-param-reassign
     field.resolve = (...args) => {
       const cursor = resolve(...args);
       const { meteorSubscription } = args[2] || {};
@@ -14,7 +17,7 @@ class CursorDirective extends SchemaDirectiveVisitor {
         return cursor.fetch();
       }
 
-      const collectionName = cursor._cursorDescription.collectionName;
+      const { collectionName } = cursor._cursorDescription;
       const result = [];
 
       cursor.observeChanges({
@@ -35,7 +38,7 @@ class CursorDirective extends SchemaDirectiveVisitor {
   }
 }
 
-export class MeteorGraphQLServer {
+export default class MeteorGraphQLServer {
   constructor(options = {}) {
     const schema = makeExecutableSchema(options, CursorDirective);
 
@@ -45,7 +48,7 @@ export class MeteorGraphQLServer {
         query,
         undefined, // rootValue
         { meteorSubscription: this },
-        variables
+        variables,
       ).then(() => {
         this.ready();
       });
@@ -53,12 +56,13 @@ export class MeteorGraphQLServer {
 
     Meteor.methods({
       async '/graphql'({ query, variables }) {
+        // eslint-disable-next-line no-return-await
         return await graphql(
           schema,
           query,
           undefined, // rootValue
           undefined, // contextValue
-          variables
+          variables,
         );
       },
     });
