@@ -27,4 +27,4 @@ notifications:
 script:
   - cd test
   - meteor npm install
-  - meteor npm run test
+  - TEST_BROWSER_DRIVER=chrome meteor npm test -- --once
