@@ -1,9 +1,6 @@
-import './index';
 import { graphql } from 'graphql';
-import {
-  makeExecutableSchema,
-  SchemaDirectiveVisitor
-} from 'graphql-tools';
+import { SchemaDirectiveVisitor } from 'graphql-tools';
+import { makeExecutableSchema } from './index';
 
 class CursorDirective extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
@@ -11,20 +8,25 @@ class CursorDirective extends SchemaDirectiveVisitor {
 
     field.resolve = (...args) => {
       const cursor = resolve(...args);
-      const { subscription } = args[2];
+      const { meteorSubscription } = args[2] || {};
+
+      if (!meteorSubscription) {
+        return cursor.fetch();
+      }
+
       const collectionName = cursor._cursorDescription.collectionName;
       const result = [];
 
       cursor.observeChanges({
         added(id, fields) {
           result.push({ _id: id, ...fields });
-          subscription.added(collectionName, id, fields);
+          meteorSubscription.added(collectionName, id, fields);
         },
         changed(id, fields) {
-          subscription.changed(collectionName, id, fields);
+          meteorSubscription.changed(collectionName, id, fields);
         },
         removed(id) {
-          subscription.removed(collectionName, id);
+          meteorSubscription.removed(collectionName, id);
         },
       });
 
@@ -35,31 +37,29 @@ class CursorDirective extends SchemaDirectiveVisitor {
 
 export class MeteorGraphQLServer {
   constructor(options = {}) {
-    const schema = this._schema = makeExecutableSchema({
-      ...options,
-      typeDefs: [
-        'directive @cursor on FIELD_DEFINITION',
-        ...(
-          Array.isArray(options.typeDefs)
-            ? options.typeDefs
-            : [options.typeDefs]
-        ),
-      ],
-      schemaDirectives: {
-        ...(options.schemaDirectovies || {}),
-        cursor: CursorDirective,
-      },
-    });
+    const schema = makeExecutableSchema(options, CursorDirective);
 
     Meteor.publish('/graphql', function ({ query, variables }) {
-      graphql(schema, query, variables, this).then(() => {
+      graphql(
+        schema,
+        query,
+        undefined, // rootValue
+        { meteorSubscription: this },
+        variables
+      ).then(() => {
         this.ready();
       });
     });
 
     Meteor.methods({
       async '/graphql'({ query, variables }) {
-        return await graphql(schema, query, variables);
+        return await graphql(
+          schema,
+          query,
+          undefined, // rootValue
+          undefined, // contextValue
+          variables
+        );
       },
     });
   }
