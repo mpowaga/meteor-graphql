@@ -1,0 +1,27 @@
+sudo: required
+addons:
+  chrome: stable
+
+dist: xenial
+
+services:
+  - xvfb
+
+language: node_js
+
+node_js:
+  - "8.15.1"
+
+before_install:
+  - curl https://install.meteor.com | /bin/sh
+  - export PATH="$HOME/.meteor:$PATH"
+
+cache:
+  directories:
+    - ~/.npm
+    - "node_modules"
+
+script:
+  - cd test
+  - meteor npm install
+  - meteor npm run test
