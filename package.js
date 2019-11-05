@@ -19,8 +19,9 @@ Package.onTest(function(api) {
     'chai': '4.2.0',
   });
   api.use('ecmascript');
-  api.use('tinytest');
   api.use('meteortesting:mocha');
+  api.use('jquery');
+  api.use('underscore');
   api.use('mpowaga:graphql');
   api.mainModule('test/client.js', 'client');
   api.mainModule('test/server.js', 'server');
