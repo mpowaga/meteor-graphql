@@ -11,6 +11,9 @@ Package.describe({
 Package.onUse(function(api) {
   api.versionsFrom('1.8.1');
   api.use('ecmascript');
+  api.use('tracker');
+  api.use('reactive-var');
+  api.use('ejson');
   api.use('tmeasday:check-npm-versions');
   api.mainModule('src/client.js', 'client');
   api.mainModule('src/server.js', 'server');

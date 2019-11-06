@@ -19,7 +19,7 @@ describe('MeteorGraphQLClient', function () {
   });
 
   it('can run simple query', async () => {
-    const result = await client.subscribe('{ hello }').result();
+    const result = await client.query('{ hello }');
     expect(result).to.eql({ data: { hello: 'Hello' } });
   });
 
@@ -81,7 +81,7 @@ describe('MeteorGraphQLClient', function () {
 
     Tracker.autorun(async () => {
       if (subscription.ready()) {
-        spy(await subscription.result());
+        spy(subscription.result());
         Tracker.nonreactive(() => ready());
       }
     });
