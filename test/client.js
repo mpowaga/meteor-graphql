@@ -74,6 +74,7 @@ describe('MeteorGraphQLClient', function () {
         Fruits.insert({ name: 'avocado' });
         setTimeout(() => {
           Fruits.remove(_id);
+          Tracker.flush();
           setTimeout(finish, 0);
         });
       }, 0);
