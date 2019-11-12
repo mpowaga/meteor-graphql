@@ -30,7 +30,7 @@ Package.onTest(function(api) {
   api.use('insecure');
   api.use('jquery');
   api.use('underscore');
-  api.use('mpowaga:graphql');
+  api.use('meteorengineer:graphql');
   api.mainModule('test/client.js', 'client');
   api.mainModule('test/server.js', 'server');
 });

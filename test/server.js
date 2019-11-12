@@ -1,5 +1,5 @@
 import { Meteor } from 'meteor/meteor';
-import MeteorGraphQLServer from 'meteor/mpowaga:graphql';
+import MeteorGraphQLServer from 'meteor/meteorengineer:graphql';
 import {
   Fruits,
   typeDefs,

@@ -5,7 +5,7 @@ import { expect } from 'chai';
 import sinon from 'sinon';
 import { Tracker } from 'meteor/tracker';
 import { _ } from 'meteor/underscore';
-import MeteorGraphQLClient from 'meteor/mpowaga:graphql';
+import MeteorGraphQLClient from 'meteor/meteorengineer:graphql';
 import { typeDefs, resolvers, Fruits } from './index';
 
 describe('MeteorGraphQLClient', function () {
