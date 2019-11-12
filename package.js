@@ -1,7 +1,7 @@
 /* global Package, Npm */
 
 Package.describe({
-  name: 'mpowaga:graphql',
+  name: 'meteorengineer:graphql',
   version: '0.0.1',
   summary: '',
   git: '',
