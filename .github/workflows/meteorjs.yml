@@ -17,5 +17,6 @@ jobs:
       run: |
         meteor npm install
         meteor npm test
+        echo "TEST"
       env:
         CI: true
