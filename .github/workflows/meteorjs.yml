@@ -5,16 +5,16 @@ on: [push]
 jobs:
   build:
 
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
 
     steps:
     - uses: actions/checkout@v1
-    - name: Use Meteor.js
-      uses: meteorengineer/setup-meteor@test
-    - name: meteor npm install and test
+    - uses: meteorengineer/setup-meteor@test
+    - name: Test (${{ matrix.os }})
       run: |
         meteor npm install
         meteor npm test
-        echo "TEST5"
-      env:
-        CI: true
