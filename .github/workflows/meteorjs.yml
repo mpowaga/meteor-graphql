@@ -12,5 +12,6 @@ jobs:
     - uses: meteorengineer/setup-meteor@test
     - name: Test
       run: |
+        ls ~ 
         meteor npm install
         meteor npm test
