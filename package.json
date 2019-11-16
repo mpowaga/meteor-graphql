@@ -1,4 +1,5 @@
 {
+  "name": "meteor-graphql",
   "private": true,
   "scripts": {
     "postinstall": "meteor npm install --prefix test",
