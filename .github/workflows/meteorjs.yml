@@ -9,10 +9,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Use Meteor.js 1.8.1
+    - name: Use Meteor.js 2.0
       uses: meteorengineer/setup-meteor@test
       with:
-        meteor-release: 1.8.1
+        meteor-release: 2.0
     - name: meteor npm install and test
       run: |
         meteor npm install
