@@ -1,4 +1,5 @@
 {
+  "name": "meteor-graphql-test",
   "private": true,
   "scripts": {
     "test": "METEOR_PACKAGE_DIRS=.. meteor test-packages --driver-package meteortesting:mocha ../"
