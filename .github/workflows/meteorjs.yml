@@ -5,13 +5,12 @@ on: [push]
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v1
     - uses: meteorengineer/setup-meteor@test
     - name: Test
       run: |
-        ls ~ 
         meteor npm install
         meteor npm test
