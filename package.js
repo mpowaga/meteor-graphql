@@ -15,6 +15,7 @@ Package.onUse(function(api) {
   api.use('reactive-var');
   api.use('ejson');
   api.use('tmeasday:check-npm-versions');
+  api.addFiles('src/checkNpmVersions.js');
   api.mainModule('src/client.js', 'client');
   api.mainModule('src/server.js', 'server');
 });
