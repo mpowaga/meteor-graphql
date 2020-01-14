@@ -22,8 +22,21 @@ class CursorDirective extends SchemaDirectiveVisitor {
 
       cursor.observeChanges({
         added(id, fields) {
-          result.push({ _id: id, ...fields });
+          const value = { _id: id, ...fields };
+
+          result.push(value);
           meteorSubscription.added(collectionName, id, fields);
+
+          if (!field.type.ofType || !field.type.ofType._fields) {
+            return;
+          }
+
+          Object.values(field.type.ofType._fields)
+            .filter((f) =>
+              typeof f.resolve === 'function'
+              && Array.isArray(f.astNode.directives)
+              && f.astNode.directives.some(({ name }) => name.value === 'cursor'))
+            .forEach((f) => f.resolve(value, ...args.slice(1)));
         },
         changed(id, fields) {
           meteorSubscription.changed(collectionName, id, fields);

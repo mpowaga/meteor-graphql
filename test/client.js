@@ -6,7 +6,13 @@ import sinon from 'sinon';
 import { Tracker } from 'meteor/tracker';
 import { _ } from 'meteor/underscore';
 import MeteorGraphQLClient from 'meteor/meteorengineer:graphql';
-import { typeDefs, resolvers, Fruits } from './index';
+import {
+  typeDefs,
+  resolvers,
+  Fruits,
+  Users,
+  Entries,
+} from './index';
 
 describe('MeteorGraphQLClient', function () {
   beforeEach((done) => {
@@ -82,6 +88,56 @@ describe('MeteorGraphQLClient', function () {
 
     Tracker.autorun(async () => {
       if (subscription.ready()) {
+        spy(subscription.result());
+        Tracker.nonreactive(() => ready());
+      }
+    });
+  });
+
+  it('can resolve nested cursors', (done) => {
+    const entry1 = { content: 'Hello world', author: { name: 'foobar' } };
+    const entry2 = { content: 'Hi there', author: { name: 'barfoo' } };
+
+    Entries.insert({
+      content: entry1.content,
+      author: Users.insert(entry1.author),
+    });
+
+    const ENTRIES = `
+      query Entries {
+        entries: allEntries {
+          content
+          author {
+            name
+          }
+        }
+      }
+    `;
+    const spy = sinon.spy();
+    const subscription = client.subscribe(ENTRIES);
+
+    function finish() {
+      subscription.stop();
+      expect(spy.firstCall.args[0]).to.eql({ data: { entries: [entry1] } });
+      expect(spy.secondCall.args[0]).to.eql({ data: { entries: [entry1, entry2] } });
+      expect(spy.callCount).to.equal(2);
+      done();
+    }
+
+    const ready = _.once(() => {
+      Entries.insert({
+        content: entry2.content,
+        author: Users.insert(entry2.author),
+      });
+      setTimeout(() => {
+        Tracker.flush();
+        setTimeout(finish, 0);
+      });
+    });
+
+    Tracker.autorun(() => {
+      if (subscription.ready()) {
+        // console.log(subscription);
         spy(subscription.result());
         Tracker.nonreactive(() => ready());
       }
