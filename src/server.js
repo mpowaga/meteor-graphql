@@ -24,7 +24,10 @@ class CursorDirective extends SchemaDirectiveVisitor {
           }
           return doc;
         }
+
+        return cursor;
       };
+
       return field;
     }
 
@@ -72,6 +75,8 @@ class CursorDirective extends SchemaDirectiveVisitor {
 
       return result;
     };
+
+    return field;
   }
 }
 

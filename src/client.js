@@ -20,6 +20,7 @@ class CursorDirective extends SchemaDirectiveVisitor {
         if (cursor) {
           return cursor.fetch()[0];
         }
+        return cursor;
       };
     }
   }
