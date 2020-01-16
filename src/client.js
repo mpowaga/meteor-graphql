@@ -15,8 +15,12 @@ class CursorDirective extends SchemaDirectiveVisitor {
     if (type.kind === 'NamedType'
       || (type.kind === 'NonNullType' && type.type.kind === 'NamedType')) {
       // eslint-disable-next-line no-param-reassign
-      field.resolve = (...args) =>
-        resolve(...args).fetch()[0];
+      field.resolve = (...args) => {
+        const cursor = resolve(...args);
+        if (cursor) {
+          return cursor.fetch()[0];
+        }
+      };
     }
   }
 }

@@ -6,12 +6,36 @@ import { makeExecutableSchema } from './index';
 class CursorDirective extends SchemaDirectiveVisitor {
   // eslint-disable-next-line class-methods-use-this
   visitFieldDefinition(field) {
-    const { resolve } = field;
+    const { resolve, astNode: { type } } = field;
+
+    if (type.kind === 'NamedType'
+      || (type.kind === 'NonNullType' && type.type.kind === 'NamedType')) {
+      // eslint-disable-next-line no-param-reassign
+      field.resolve = (...args) => {
+        const cursor = resolve(...args);
+        const { meteorSubscription } = args[2] || {};
+
+        if (cursor) {
+          const { collectionName } = cursor._cursorDescription;
+          const doc = cursor.fetch()[0];
+          if (doc && meteorSubscription) {
+            // TODO: resolve fields
+            meteorSubscription.added(collectionName, doc._id, doc);
+          }
+          return doc;
+        }
+      };
+      return field;
+    }
 
     // eslint-disable-next-line no-param-reassign
     field.resolve = (...args) => {
       const cursor = resolve(...args);
       const { meteorSubscription } = args[2] || {};
+
+      if (cursor == null || typeof cursor.fetch !== 'function') {
+        return cursor;
+      }
 
       if (!meteorSubscription) {
         return cursor.fetch();

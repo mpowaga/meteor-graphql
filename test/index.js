@@ -18,7 +18,8 @@ export const typeDefs = `
   type Entry {
     _id: ID!
     content: String!
-    author: User! @cursor
+    author: User @cursor
+    emptyCursor: User @cursor
   }
 
   type Query {
@@ -37,6 +38,9 @@ export const resolvers = {
   Entry: {
     author(entry) {
       return Users.find({ _id: entry.author });
+    },
+    emptyCursor() {
+      return undefined;
     },
   },
   Query: {

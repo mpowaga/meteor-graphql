@@ -94,13 +94,17 @@ describe('MeteorGraphQLClient', function () {
     });
   });
 
-  it('can resolve nested cursors', (done) => {
-    const entry1 = { content: 'Hello world', author: { name: 'foobar' } };
-    const entry2 = { content: 'Hi there', author: { name: 'barfoo' } };
+  it('can resolve nested cursors', async () => {
+    const entry1 = { content: 'Hello world', author: { name: 'foobar' }, emptyCursor: null };
+    const entry2 = { content: 'Hi there', author: { name: 'barfoo' }, emptyCursor: null };
 
     Entries.insert({
       content: entry1.content,
       author: Users.insert(entry1.author),
+    });
+    Entries.insert({
+      content: entry2.content,
+      author: Users.insert(entry2.author),
     });
 
     const ENTRIES = `
@@ -110,37 +114,15 @@ describe('MeteorGraphQLClient', function () {
           author {
             name
           }
+          emptyCursor {
+            _id
+          }
         }
       }
     `;
-    const spy = sinon.spy();
-    const subscription = client.subscribe(ENTRIES);
 
-    function finish() {
-      subscription.stop();
-      expect(spy.firstCall.args[0]).to.eql({ data: { entries: [entry1] } });
-      expect(spy.secondCall.args[0]).to.eql({ data: { entries: [entry1, entry2] } });
-      expect(spy.callCount).to.equal(2);
-      done();
-    }
-
-    const ready = _.once(() => {
-      Entries.insert({
-        content: entry2.content,
-        author: Users.insert(entry2.author),
-      });
-      setTimeout(() => {
-        Tracker.flush();
-        setTimeout(finish, 0);
-      });
-    });
-
-    Tracker.autorun(() => {
-      if (subscription.ready()) {
-        // console.log(subscription);
-        spy(subscription.result());
-        Tracker.nonreactive(() => ready());
-      }
-    });
+    const result = await client.query(ENTRIES);
+    expect(result.errors).to.be.undefined;
+    expect(result.data.entries).to.eql([entry1, entry2]);
   });
 });
