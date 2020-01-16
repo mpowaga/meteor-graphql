@@ -18,7 +18,7 @@ export const typeDefs = `
   type Entry {
     _id: ID!
     content: String!
-    author: User @cursor
+    author: User! @cursor
     emptyCursor: User @cursor
   }
 

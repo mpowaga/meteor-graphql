@@ -10,6 +10,15 @@ function getTypeFields(type) {
   return type._fields;
 }
 
+function resolveFields(field, args, value) {
+  Object.values(getTypeFields(field.type))
+    .filter((f) =>
+      typeof f.resolve === 'function'
+      && Array.isArray(f.astNode.directives)
+      && f.astNode.directives.some(({ name }) => name.value === 'cursor'))
+    .forEach((f) => f.resolve(value, ...args.slice(1)));
+}
+
 class CursorDirective extends SchemaDirectiveVisitor {
   // eslint-disable-next-line class-methods-use-this
   visitFieldDefinition(field) {
@@ -57,18 +66,14 @@ class CursorDirective extends SchemaDirectiveVisitor {
       cursor.observeChanges({
         added(id, fields) {
           const value = { _id: id, ...fields };
-
           result.push(value);
           meteorSubscription.added(collectionName, id, fields);
-          Object.values(getTypeFields(field.type))
-            .filter((f) =>
-              typeof f.resolve === 'function'
-              && Array.isArray(f.astNode.directives)
-              && f.astNode.directives.some(({ name }) => name.value === 'cursor'))
-            .forEach((f) => f.resolve(value, ...args.slice(1)));
+          resolveFields(field, args, value);
         },
         changed(id, fields) {
+          const value = { _id: id, ...fields };
           meteorSubscription.changed(collectionName, id, fields);
+          resolveFields(field, args, value);
         },
         removed(id) {
           meteorSubscription.removed(collectionName, id);

@@ -44,8 +44,13 @@ class Subscription {
           undefined, // contextValue
           this._variables,
         ).then((result) => {
+          // TODO: handle errors
+          if (result.errors) {
+            return null;
+          }
           this._result.set(result);
           this._ready.set(true);
+          return null;
         });
       }
     });

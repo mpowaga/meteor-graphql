@@ -185,5 +185,64 @@ describe('MeteorGraphQLClient', function () {
         }
       });
     });
+
+    it('can update nested cursor', (done) => {
+      const user = { name: 'baz' };
+      const userId = Users.insert(user);
+      const entry1V1 = { content: 'Hello world', author: { name: 'foobar' }, emptyCursor: null };
+      const entry2V1 = { content: 'Hi there', author: { name: 'barfoo' }, emptyCursor: null };
+      const entry2V2 = { content: 'Hi there', author: user, emptyCursor: null };
+
+      Entries.insert({
+        content: entry1V1.content,
+        author: Users.insert(entry1V1.author),
+      });
+
+      const ENTRIES = `
+        query Entries {
+          entries: allEntries {
+            content
+            author {
+              name
+            }
+            emptyCursor {
+              _id
+              name
+            }
+          }
+        }
+      `;
+      const subscription = client.subscribe(ENTRIES);
+      const spy = sinon.spy();
+
+      function finish() {
+        subscription.stop();
+        Tracker.flush();
+        expect(spy.getCall(0).args[0]).to.eql({ data: { entries: [entry1V1] } });
+        expect(spy.getCall(1).args[0]).to.eql({ data: { entries: [entry1V1, entry2V1] } });
+        expect(spy.getCall(2).args[0]).to.eql({ data: { entries: [entry1V1, entry2V2] } });
+        expect(spy.callCount).to.equal(3);
+        done();
+      }
+
+      const ready = _.once(() => {
+        const entryId = Entries.insert({
+          content: entry2V1.content,
+          author: Users.insert(entry2V1.author),
+        });
+        setTimeout(() => {
+          Entries.update(entryId, { $set: { author: userId } });
+          Tracker.flush();
+          setTimeout(finish, 100);
+        }, 0);
+      });
+
+      Tracker.autorun(async () => {
+        if (subscription.ready()) {
+          spy(subscription.result());
+          Tracker.nonreactive(() => ready());
+        }
+      });
+    });
   });
 });
