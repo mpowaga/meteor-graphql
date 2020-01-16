@@ -130,5 +130,60 @@ describe('MeteorGraphQLClient', function () {
         }
       });
     });
+
+    it('can resolve nested mongo cursors', (done) => {
+      const entry1 = { content: 'Hello world', author: { name: 'foobar' }, emptyCursor: null };
+      const entry2 = { content: 'Hi there', author: { name: 'barfoo' }, emptyCursor: null };
+
+      Entries.insert({
+        content: entry1.content,
+        author: Users.insert(entry1.author),
+      });
+
+      const ENTRIES = `
+        query Entries {
+          entries: allEntries {
+            content
+            author {
+              name
+            }
+            emptyCursor {
+              _id
+            }
+          }
+        }
+      `;
+      const subscription = client.subscribe(ENTRIES);
+      const spy = sinon.spy();
+
+      function finish() {
+        subscription.stop();
+        Tracker.flush();
+        expect(spy.firstCall.args[0]).to.eql({ data: { entries: [entry1] } });
+        expect(spy.secondCall.args[0]).to.eql({ data: { entries: [entry1, entry2] } });
+        expect(spy.thirdCall.args[0]).to.eql({ data: { entries: [entry1] } });
+        expect(spy.callCount).to.equal(3);
+        done();
+      }
+
+      const ready = _.once(() => {
+        const entryId = Entries.insert({
+          content: entry2.content,
+          author: Users.insert(entry2.author),
+        });
+        setTimeout(() => {
+          Entries.remove(entryId);
+          Tracker.flush();
+          setTimeout(finish, 0);
+        }, 0);
+      });
+
+      Tracker.autorun(async () => {
+        if (subscription.ready()) {
+          spy(subscription.result());
+          Tracker.nonreactive(() => ready());
+        }
+      });
+    });
   });
 });

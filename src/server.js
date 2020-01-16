@@ -3,6 +3,13 @@ import { graphql } from 'graphql';
 import { SchemaDirectiveVisitor } from 'graphql-tools';
 import { makeExecutableSchema } from './index';
 
+function getTypeFields(type) {
+  if (type.ofType) {
+    return getTypeFields(type.ofType);
+  }
+  return type._fields;
+}
+
 class CursorDirective extends SchemaDirectiveVisitor {
   // eslint-disable-next-line class-methods-use-this
   visitFieldDefinition(field) {
@@ -53,12 +60,7 @@ class CursorDirective extends SchemaDirectiveVisitor {
 
           result.push(value);
           meteorSubscription.added(collectionName, id, fields);
-
-          if (!field.type.ofType || !field.type.ofType._fields) {
-            return;
-          }
-
-          Object.values(field.type.ofType._fields)
+          Object.values(getTypeFields(field.type))
             .filter((f) =>
               typeof f.resolve === 'function'
               && Array.isArray(f.astNode.directives)
