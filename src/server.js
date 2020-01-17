@@ -19,7 +19,7 @@ function resolveFields(field, args, value) {
     .forEach((f) => f.resolve(value, ...args.slice(1)));
 }
 
-function singleObjectResolver(resolve) {
+function singleObjectResolver(resolve, field) {
   return (...args) => {
     const cursor = resolve(...args);
     const { meteorSubscription } = args[2] || {};
@@ -27,8 +27,8 @@ function singleObjectResolver(resolve) {
       const { collectionName } = cursor._cursorDescription;
       const doc = cursor.fetch()[0];
       if (doc && meteorSubscription) {
-        // TODO: resolve fields
         meteorSubscription.added(collectionName, doc._id, doc);
+        resolveFields(field, args, doc);
       }
       return doc;
     }
@@ -115,7 +115,7 @@ class CursorDirective extends SchemaDirectiveVisitor {
 
     if (isSingleObject(this.schema, type)) {
       // eslint-disable-next-line no-param-reassign
-      field.resolve = singleObjectResolver(resolve);
+      field.resolve = singleObjectResolver(resolve, field);
     } else if (isListOfObjects(this.schema, type)) {
       // eslint-disable-next-line no-param-reassign
       field.resolve = listOfObjectsResolver(resolve, field);
