@@ -13,6 +13,8 @@ export const typeDefs = `
   type User {
     _id: ID!
     name: String!
+    email: String
+    throws: User @cursor
   }
 
   type Entry {
@@ -35,6 +37,11 @@ export const typeDefs = `
 `;
 
 export const resolvers = {
+  User: {
+    throws() {
+      throw new Error('This resolver should never be called!');
+    },
+  },
   Entry: {
     author(entry) {
       return Users.find({ _id: entry.author });

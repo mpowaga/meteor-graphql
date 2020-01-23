@@ -10,13 +10,40 @@ function getTypeFields(type) {
   return type._fields;
 }
 
-function resolveFields(field, args, value) {
+function pick(obj, keys) {
+  return keys.reduce((result, key) => {
+    // eslint-disable-next-line no-param-reassign
+    result[key] = obj[key];
+    return result;
+  }, {});
+}
+
+function findSelection(fieldNodes, field) {
+  for (let i = 0; i < fieldNodes.length; i += 1) {
+    const { selectionSet: { selections = [] } = {} } = fieldNodes[i];
+    for (let y = 0; y < selections.length; y += 1) {
+      if (selections[y].name.value === field.name) {
+        return selections[y].selectionSet.selections;
+      }
+    }
+  }
+  return undefined;
+}
+
+function resolveFields(field, args, value, selectedFields) {
   Object.values(getTypeFields(field.type))
     .filter((f) =>
-      typeof f.resolve === 'function'
+      f != null
+      && typeof f.resolve === 'function'
       && Array.isArray(f.astNode.directives)
-      && f.astNode.directives.some(({ name }) => name.value === 'cursor'))
-    .forEach((f) => f.resolve(value, ...args.slice(1)));
+      && f.astNode.directives.some(({ name }) => name.value === 'cursor')
+      && selectedFields.includes(f.name))
+    .forEach((f) => {
+      const resolveArgs = [value].concat(args.slice(1));
+      resolveArgs[3].fieldNodes = findSelection(resolveArgs[3].fieldNodes, f)
+        || resolveArgs[3].fieldNodes;
+      f.resolve(...resolveArgs);
+    });
 }
 
 function singleObjectResolver(resolve, field) {
@@ -24,11 +51,12 @@ function singleObjectResolver(resolve, field) {
     const cursor = resolve(...args);
     const { meteorSubscription } = args[2] || {};
     if (cursor) {
+      const selectedFields = args[3].fieldNodes.map((n) => n.name.value);
       const { collectionName } = cursor._cursorDescription;
       const doc = cursor.fetch()[0];
       if (doc && meteorSubscription) {
-        meteorSubscription.added(collectionName, doc._id, doc);
-        resolveFields(field, args, doc);
+        meteorSubscription.added(collectionName, doc._id, pick(doc, selectedFields));
+        resolveFields(field, args, doc, selectedFields);
       }
       return doc;
     }
@@ -48,6 +76,10 @@ function listOfObjectsResolver(resolve, field) {
       return cursor.fetch();
     }
 
+    const { selectionSet } = args[3].fieldNodes[0];
+    const selectedFields = selectionSet
+      ? (selectionSet.selections || []).map((s) => s.name.value)
+      : [];
     const { collectionName } = cursor._cursorDescription;
     const result = [];
 
@@ -55,13 +87,15 @@ function listOfObjectsResolver(resolve, field) {
       added(id, fields) {
         const value = { _id: id, ...fields };
         result.push(value);
-        meteorSubscription.added(collectionName, id, fields);
-        resolveFields(field, args, value);
+        meteorSubscription.added(collectionName, id, pick(fields, ['content', 'author', 'emptyCursor']));
+        resolveFields(field, args, value, selectedFields);
       },
       changed(id, fields) {
+        const changedFields = selectedFields.filter((name) =>
+          Object.prototype.hasOwnProperty.call(fields, name));
         const value = { _id: id, ...fields };
-        meteorSubscription.changed(collectionName, id, fields);
-        resolveFields(field, args, value);
+        meteorSubscription.changed(collectionName, id, pick(fields, changedFields));
+        resolveFields(field, args, value, changedFields);
       },
       removed(id) {
         meteorSubscription.removed(collectionName, id);

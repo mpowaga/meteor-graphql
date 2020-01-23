@@ -69,6 +69,17 @@ describe('MeteorGraphQLClient', function () {
       expect(result.errors).to.be.undefined;
       expect(result.data.entries).to.eql([entry1, entry2]);
     });
+
+    it('resolves only selected fields', async () => {
+      const entry = { content: 'Hello world', author: { name: 'foobar' }, emptyCursor: null };
+      Entries.insert({
+        content: entry.content,
+        author: Users.insert(entry.author),
+      });
+      const result = await client.query('{ entries: allEntries { content } }');
+      expect(result.errors).to.be.undefined;
+      expect(result.data.entries).to.eql([{ content: entry.content }]);
+    });
   });
 
   describe('mutations', () => {
@@ -235,6 +246,84 @@ describe('MeteorGraphQLClient', function () {
           Tracker.flush();
           setTimeout(finish, 100);
         }, 0);
+      });
+
+      Tracker.autorun(async () => {
+        if (subscription.ready()) {
+          spy(subscription.result());
+          Tracker.nonreactive(() => ready());
+        }
+      });
+    });
+
+    it('resolves only selected fields', (done) => {
+      const entry1 = { content: 'Hello world', author: { name: 'foobar', email: 'foo@bar.com' }, emptyCursor: null };
+      const entry2 = { content: 'Hi there', author: { name: 'barfoo', email: 'bar@foo.com' }, emptyCursor: null };
+      const user1Id = Users.insert(entry1.author);
+      const user2Id = Users.insert(entry2.author);
+      const entry1Id = Entries.insert({
+        content: entry1.content,
+        author: user1Id,
+      });
+      let entry2Id;
+      const subscription = client.subscribe('{ entries: allEntries { content author { email } } }');
+      const spy = sinon.spy();
+
+      function finish() {
+        subscription.stop();
+        Tracker.flush();
+        expect(spy.getCall(0).args[0]).to.eql(
+          {
+            data: {
+              entries: [{ content: entry1.content, author: { email: entry1.author.email } }],
+            },
+          },
+        );
+        expect(spy.getCall(1).args[0]).to.eql(
+          {
+            data: {
+              entries: [
+                { content: entry1.content, author: { email: entry1.author.email } },
+                { content: entry2.content, author: { email: entry2.author.email } },
+              ],
+            },
+          },
+        );
+        expect(spy.getCall(2).args[0]).to.eql(
+          {
+            data: {
+              entries: [
+                { content: entry1.content, author: { email: entry2.author.email } },
+                { content: entry2.content, author: { email: entry2.author.email } },
+              ],
+            },
+          },
+        );
+        expect(Entries.find().fetch()).to.eql([
+          {
+            _id: entry1Id, content: entry1.content, author: user2Id, emptyCursor: undefined,
+          },
+          {
+            _id: entry2Id, content: entry2.content, author: user2Id, emptyCursor: undefined,
+          },
+        ]);
+        expect(Users.findOne(user1Id)).to.eql({ _id: user1Id, email: entry1.author.email });
+        expect(Users.findOne(user2Id)).to.eql({ _id: user2Id, email: entry2.author.email });
+        expect(Users.find().fetch().length).to.equal(2);
+        expect(spy.callCount).to.equal(3);
+        done();
+      }
+
+      const ready = _.once(() => {
+        entry2Id = Entries.insert({
+          content: entry2.content,
+          author: user2Id,
+        });
+        setTimeout(() => {
+          Entries.update(entry1Id, { $set: { author: user2Id } });
+          Tracker.flush();
+          setTimeout(finish, 100);
+        }, 100);
       });
 
       Tracker.autorun(async () => {
