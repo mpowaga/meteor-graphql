@@ -87,7 +87,7 @@ function listOfObjectsResolver(resolve, field) {
       added(id, fields) {
         const value = { _id: id, ...fields };
         result.push(value);
-        meteorSubscription.added(collectionName, id, pick(fields, ['content', 'author', 'emptyCursor']));
+        meteorSubscription.added(collectionName, id, pick(fields, selectedFields));
         resolveFields(field, args, value, selectedFields);
       },
       changed(id, fields) {
