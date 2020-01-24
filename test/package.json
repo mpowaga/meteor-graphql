@@ -12,7 +12,9 @@
     "meteor-node-stubs": "^0.4.1"
   },
   "devDependencies": {
+    "chai": "^4.2.0",
     "chromedriver": "^78.0.1",
-    "selenium-webdriver": "^3.6.0"
+    "selenium-webdriver": "^3.6.0",
+    "sinon": "^8.1.1"
   }
 }
