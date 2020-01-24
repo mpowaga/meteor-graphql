@@ -3,8 +3,8 @@
 Package.describe({
   name: 'meteorengineer:graphql',
   version: '0.0.1',
-  summary: '',
-  git: '',
+  summary: 'Realtime GraphQL Server for Meteor.JS',
+  git: 'https://github.com/meteorengineer/meteor-graphql',
   documentation: 'README.md',
 });
 
