@@ -1,8 +1,8 @@
 /* global describe, it, beforeEach */
+/* eslint-disable no-return-assign */
 
 import { Meteor } from 'meteor/meteor';
 import { expect } from 'chai';
-import sinon from 'sinon';
 import { Tracker } from 'meteor/tracker';
 import { _ } from 'meteor/underscore';
 import MeteorGraphQLClient from 'meteor/meteorengineer:graphql';
@@ -13,6 +13,44 @@ import {
   Users,
   Entries,
 } from './index';
+
+async function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function testSubscription(subscription) {
+  return new Promise((resolve) => {
+    let result;
+    let computation;
+    const ready = _.once(() => {
+      Meteor.setTimeout(() => {
+        resolve({
+          async run(fn) {
+            Tracker.flush();
+            fn();
+            Tracker.flush();
+            await sleep(100);
+            return result;
+          },
+          result() {
+            return result;
+          },
+          async stop() {
+            computation.stop();
+            subscription.stop();
+            await sleep(1);
+          },
+        });
+      }, 1);
+    });
+    computation = Tracker.autorun(() => {
+      if (subscription.ready()) {
+        result = subscription.result();
+        Tracker.nonreactive(() => ready());
+      }
+    });
+  });
+}
 
 describe('MeteorGraphQLClient', function () {
   beforeEach((done) => {
@@ -97,7 +135,7 @@ describe('MeteorGraphQLClient', function () {
   });
 
   describe('subscriptions', () => {
-    it('can run simple subscription', (done) => {
+    it('can run simple subscription', async () => {
       const FRUITS = `
         query Fruits($selection: [String!]!) {
           fruits: selectedFruits(selection: $selection) {
@@ -110,47 +148,27 @@ describe('MeteorGraphQLClient', function () {
       const subscription = client.subscribe(FRUITS, {
         selection: [name, 'apple'],
       });
-      const spy = sinon.spy();
+      const { run, stop } = await testSubscription(subscription);
       let _id;
-
-      function finish() {
-        subscription.stop();
-        expect(spy.firstCall.args[0]).to.eql({ data: { fruits: [] } });
-        expect(spy.secondCall.args[0]).to.eql({ data: { fruits: [{ _id, name }] } });
-        expect(spy.thirdCall.args[0]).to.eql({ data: { fruits: [] } });
-        expect(spy.callCount).to.equal(3);
-        done();
-      }
-
-      const ready = _.once(() => {
-        _id = Fruits.insert({ name });
-        setTimeout(() => {
-          Fruits.insert({ name: 'avocado' });
-          setTimeout(() => {
-            Fruits.remove(_id);
-            Tracker.flush();
-            setTimeout(finish, 0);
-          });
-        }, 0);
-      });
-
-      Tracker.autorun(async () => {
-        if (subscription.ready()) {
-          spy(subscription.result());
-          Tracker.nonreactive(() => ready());
-        }
-      });
+      expect(
+        await run(() => _id = Fruits.insert({ name })),
+      ).to.eql({ data: { fruits: [{ _id, name }] } });
+      expect(
+        await run(() => Fruits.insert({ name: 'avocado' })),
+      ).to.eql({ data: { fruits: [{ _id, name }] } });
+      expect(
+        await run(() => Fruits.remove(_id)),
+      ).to.eql({ data: { fruits: [] } });
+      await stop();
     });
 
-    it('can resolve nested mongo cursors', (done) => {
+    it('can resolve nested cursors', async () => {
       const entry1 = { content: 'Hello world', author: { name: 'foobar' }, emptyCursor: null };
       const entry2 = { content: 'Hi there', author: { name: 'barfoo' }, emptyCursor: null };
-
       Entries.insert({
         content: entry1.content,
         author: Users.insert(entry1.author),
       });
-
       const ENTRIES = `
         query Entries {
           entries: allEntries {
@@ -165,50 +183,31 @@ describe('MeteorGraphQLClient', function () {
         }
       `;
       const subscription = client.subscribe(ENTRIES);
-      const spy = sinon.spy();
-
-      function finish() {
-        subscription.stop();
-        Tracker.flush();
-        expect(spy.firstCall.args[0]).to.eql({ data: { entries: [entry1] } });
-        expect(spy.secondCall.args[0]).to.eql({ data: { entries: [entry1, entry2] } });
-        expect(spy.thirdCall.args[0]).to.eql({ data: { entries: [entry1] } });
-        expect(spy.callCount).to.equal(3);
-        done();
-      }
-
-      const ready = _.once(() => {
-        const entryId = Entries.insert({
+      const { run, result, stop } = await testSubscription(subscription);
+      expect(result()).to.eql({ data: { entries: [entry1] } });
+      let entryId;
+      expect(
+        await run(() => entryId = Entries.insert({
           content: entry2.content,
           author: Users.insert(entry2.author),
-        });
-        setTimeout(() => {
-          Entries.remove(entryId);
-          Tracker.flush();
-          setTimeout(finish, 0);
-        }, 0);
-      });
-
-      Tracker.autorun(async () => {
-        if (subscription.ready()) {
-          spy(subscription.result());
-          Tracker.nonreactive(() => ready());
-        }
-      });
+        })),
+      ).to.eql({ data: { entries: [entry1, entry2] } });
+      expect(
+        await run(() => Entries.remove(entryId)),
+      ).to.eql({ data: { entries: [entry1] } });
+      await stop();
     });
 
-    it('can update nested cursor', (done) => {
+    it('can update nested cursor', async () => {
       const user = { name: 'baz' };
       const userId = Users.insert(user);
       const entry1V1 = { content: 'Hello world', author: { name: 'foobar' }, emptyCursor: null };
       const entry2V1 = { content: 'Hi there', author: { name: 'barfoo' }, emptyCursor: null };
       const entry2V2 = { content: 'Hi there', author: user, emptyCursor: null };
-
       Entries.insert({
         content: entry1V1.content,
         author: Users.insert(entry1V1.author),
       });
-
       const ENTRIES = `
         query Entries {
           entries: allEntries {
@@ -224,39 +223,22 @@ describe('MeteorGraphQLClient', function () {
         }
       `;
       const subscription = client.subscribe(ENTRIES);
-      const spy = sinon.spy();
-
-      function finish() {
-        subscription.stop();
-        Tracker.flush();
-        expect(spy.getCall(0).args[0]).to.eql({ data: { entries: [entry1V1] } });
-        expect(spy.getCall(1).args[0]).to.eql({ data: { entries: [entry1V1, entry2V1] } });
-        expect(spy.getCall(2).args[0]).to.eql({ data: { entries: [entry1V1, entry2V2] } });
-        expect(spy.callCount).to.equal(3);
-        done();
-      }
-
-      const ready = _.once(() => {
-        const entryId = Entries.insert({
+      const { run, result, stop } = await testSubscription(subscription);
+      expect(result()).to.eql({ data: { entries: [entry1V1] } });
+      let entryId;
+      expect(
+        await run(() => entryId = Entries.insert({
           content: entry2V1.content,
           author: Users.insert(entry2V1.author),
-        });
-        setTimeout(() => {
-          Entries.update(entryId, { $set: { author: userId } });
-          Tracker.flush();
-          setTimeout(finish, 100);
-        }, 0);
-      });
-
-      Tracker.autorun(async () => {
-        if (subscription.ready()) {
-          spy(subscription.result());
-          Tracker.nonreactive(() => ready());
-        }
-      });
+        })),
+      ).to.eql({ data: { entries: [entry1V1, entry2V1] } });
+      expect(
+        await run(() => Entries.update(entryId, { $set: { author: userId } })),
+      ).to.eql({ data: { entries: [entry1V1, entry2V2] } });
+      await stop();
     });
 
-    it('resolves only selected fields', (done) => {
+    it('resolves only selected fields', async () => {
       const entry1 = { content: 'Hello world', author: { name: 'foobar', email: 'foo@bar.com' } };
       const entry2 = { content: 'Hi there', author: { name: 'barfoo', email: 'bar@foo.com' } };
       const user1Id = Users.insert(entry1.author);
@@ -267,71 +249,47 @@ describe('MeteorGraphQLClient', function () {
       });
       let entry2Id;
       const subscription = client.subscribe('{ entries: allEntries { content author { email } } }');
-      const spy = sinon.spy();
-
-      function finish() {
-        subscription.stop();
-        Tracker.flush();
-        expect(spy.getCall(0).args[0]).to.eql(
-          {
-            data: {
-              entries: [{ content: entry1.content, author: { email: entry1.author.email } }],
-            },
-          },
-        );
-        expect(spy.getCall(1).args[0]).to.eql(
-          {
-            data: {
-              entries: [
-                { content: entry1.content, author: { email: entry1.author.email } },
-                { content: entry2.content, author: { email: entry2.author.email } },
-              ],
-            },
-          },
-        );
-        expect(spy.getCall(2).args[0]).to.eql(
-          {
-            data: {
-              entries: [
-                { content: entry1.content, author: { email: entry2.author.email } },
-                { content: entry2.content, author: { email: entry2.author.email } },
-              ],
-            },
-          },
-        );
-        expect(Entries.find().fetch()).to.eql([
-          {
-            _id: entry1Id, content: entry1.content, author: user2Id,
-          },
-          {
-            _id: entry2Id, content: entry2.content, author: user2Id,
-          },
-        ]);
-        expect(Users.findOne(user1Id)).to.eql({ _id: user1Id, email: entry1.author.email });
-        expect(Users.findOne(user2Id)).to.eql({ _id: user2Id, email: entry2.author.email });
-        expect(Users.find().fetch().length).to.equal(2);
-        expect(spy.callCount).to.equal(3);
-        done();
-      }
-
-      const ready = _.once(() => {
-        entry2Id = Entries.insert({
+      const { run, result, stop } = await testSubscription(subscription);
+      expect(result()).to.eql({
+        data: {
+          entries: [{ content: entry1.content, author: { email: entry1.author.email } }],
+        },
+      });
+      expect(
+        await run(() => entry2Id = Entries.insert({
           content: entry2.content,
           author: user2Id,
-        });
-        setTimeout(() => {
-          Entries.update(entry1Id, { $set: { author: user2Id } });
-          Tracker.flush();
-          setTimeout(finish, 100);
-        }, 100);
+        })),
+      ).to.eql({
+        data: {
+          entries: [
+            { content: entry1.content, author: { email: entry1.author.email } },
+            { content: entry2.content, author: { email: entry2.author.email } },
+          ],
+        },
       });
-
-      Tracker.autorun(async () => {
-        if (subscription.ready()) {
-          spy(subscription.result());
-          Tracker.nonreactive(() => ready());
-        }
+      expect(
+        await run(() => Entries.update(entry1Id, { $set: { author: user2Id } })),
+      ).to.eql({
+        data: {
+          entries: [
+            { content: entry1.content, author: { email: entry2.author.email } },
+            { content: entry2.content, author: { email: entry2.author.email } },
+          ],
+        },
       });
+      expect(Entries.find().fetch()).to.eql([
+        {
+          _id: entry1Id, content: entry1.content, author: user2Id,
+        },
+        {
+          _id: entry2Id, content: entry2.content, author: user2Id,
+        },
+      ]);
+      expect(Users.findOne(user1Id)).to.eql({ _id: user1Id, email: entry1.author.email });
+      expect(Users.findOne(user2Id)).to.eql({ _id: user2Id, email: entry2.author.email });
+      expect(Users.find().fetch().length).to.equal(2);
+      await stop();
     });
   });
 });
