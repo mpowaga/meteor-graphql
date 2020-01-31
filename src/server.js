@@ -76,10 +76,9 @@ function listOfObjectsResolver(resolve, field) {
       return cursor.fetch();
     }
 
-    const { selectionSet } = args[3].fieldNodes[0];
-    const selectedFields = selectionSet
-      ? (selectionSet.selections || []).map((s) => s.name.value)
-      : [];
+    const selectedFields = (
+      args[3].fieldNodes[0]?.selectionSet?.selections || []
+    ).map((selection) => selection.name.value);
     const { collectionName } = cursor._cursorDescription;
     const result = [];
 
