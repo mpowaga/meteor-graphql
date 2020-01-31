@@ -80,14 +80,17 @@ function listOfObjectsResolver(resolve, field) {
       args[3].fieldNodes[0]?.selectionSet?.selections || []
     ).map((selection) => selection.name.value);
     const { collectionName } = cursor._cursorDescription;
-    const result = [];
+    const initialResult = [];
+    let initializing = true;
 
     cursor.observeChanges({
       added(id, fields) {
         const value = { _id: id, ...fields };
-        result.push(value);
         meteorSubscription.added(collectionName, id, pick(fields, selectedFields));
         resolveFields(field, args, value, selectedFields);
+        if (initializing) {
+          initialResult.push(value);
+        }
       },
       changed(id, fields) {
         const changedFields = selectedFields.filter((name) =>
@@ -100,9 +103,10 @@ function listOfObjectsResolver(resolve, field) {
         meteorSubscription.removed(collectionName, id);
       },
     });
+    initializing = false;
 
-    // TODO: remove result array after it is returned
-    return result;
+    // TODO: remove initialResult array after it is returned
+    return initialResult;
   };
 }
 
