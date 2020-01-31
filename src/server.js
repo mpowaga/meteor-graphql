@@ -19,15 +19,16 @@ function pick(obj, keys) {
 }
 
 function findSelection(fieldNodes, field) {
-  for (let i = 0; i < fieldNodes.length; i += 1) {
-    const { selectionSet: { selections = [] } = {} } = fieldNodes[i];
-    for (let y = 0; y < selections.length; y += 1) {
-      if (selections[y].name.value === field.name) {
-        return selections[y].selectionSet.selections;
+  // eslint-disable-next-line no-restricted-syntax
+  for (const node of Array.isArray(fieldNodes) ? fieldNodes : []) {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const selection of node?.selectionSet?.selections || []) {
+      if (selection.name.value === field.name) {
+        return selection.selectionSet.selections;
       }
     }
   }
-  return undefined;
+  return fieldNodes;
 }
 
 function resolveFields(field, args, value, selectedFields) {
@@ -40,8 +41,7 @@ function resolveFields(field, args, value, selectedFields) {
       && selectedFields.includes(f.name))
     .forEach((f) => {
       const resolveArgs = [value].concat(args.slice(1));
-      resolveArgs[3].fieldNodes = findSelection(resolveArgs[3].fieldNodes, f)
-        || resolveArgs[3].fieldNodes;
+      resolveArgs[3].fieldNodes = findSelection(resolveArgs[3].fieldNodes, f);
       f.resolve(...resolveArgs);
     });
 }
