@@ -81,9 +81,10 @@ function listOfObjectsResolver(resolve, field) {
     ).map((selection) => selection.name.value);
     const { collectionName } = cursor._cursorDescription;
     const initialResult = [];
+    const publishedIds = new Set();
     let initializing = true;
 
-    cursor.observeChanges({
+    const handle = cursor.observeChanges({
       added(id, fields) {
         const value = { _id: id, ...fields };
         meteorSubscription.added(collectionName, id, pick(fields, selectedFields));
@@ -91,6 +92,7 @@ function listOfObjectsResolver(resolve, field) {
         if (initializing) {
           initialResult.push(value);
         }
+        publishedIds.add(id);
       },
       changed(id, fields) {
         const changedFields = selectedFields.filter((name) =>
@@ -101,9 +103,15 @@ function listOfObjectsResolver(resolve, field) {
       },
       removed(id) {
         meteorSubscription.removed(collectionName, id);
+        publishedIds.delete(id);
       },
     });
     initializing = false;
+    meteorSubscription.onStop(() => {
+      handle.stop();
+      publishedIds.forEach((id) => meteorSubscription.removed(collectionName, id));
+      publishedIds.clear();
+    });
 
     // TODO: remove initialResult array after it is returned
     return initialResult;

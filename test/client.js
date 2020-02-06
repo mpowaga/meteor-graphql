@@ -38,7 +38,7 @@ function testSubscription(subscription) {
           async stop() {
             computation.stop();
             subscription.stop();
-            await sleep(1);
+            await sleep(100);
           },
         });
       }, 1);
@@ -160,6 +160,21 @@ describe('MeteorGraphQLClient', function () {
         await run(() => Fruits.remove(_id)),
       ).to.eql({ data: { fruits: [] } });
       await stop();
+    });
+
+    it('removes documents when subscription is stopped', async () => {
+      const fruits = [
+        'avocado',
+        'apple',
+        'banana',
+        'cherry'
+      ]
+      fruits.forEach((name) => Fruits.insert({ name }));
+      const subscription = client.subscribe('{ allFruits { name } }');
+      const { stop } = await testSubscription(subscription);
+      expect(Fruits.find().count()).to.equal(fruits.length);
+      await stop();
+      expect(Fruits.find().count()).to.equal(0);
     });
 
     it('can resolve nested cursors', async () => {
