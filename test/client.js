@@ -167,8 +167,8 @@ describe('MeteorGraphQLClient', function () {
         'avocado',
         'apple',
         'banana',
-        'cherry'
-      ]
+        'cherry',
+      ];
       fruits.forEach((name) => Fruits.insert({ name }));
       const subscription = client.subscribe('{ allFruits { name } }');
       const { stop } = await testSubscription(subscription);
