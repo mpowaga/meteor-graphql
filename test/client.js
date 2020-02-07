@@ -162,6 +162,30 @@ describe('MeteorGraphQLClient', function () {
       await stop();
     });
 
+    it('can resolve single document cursor', async () => {
+      const name = 'apple';
+      const id = Fruits.insert({ name });
+      const FRUIT = `
+        query Fruit($id: ID!) {
+          fruit(id: $id) {
+            _id
+            name
+          }
+        }
+      `;
+      const subscription = client.subscribe(FRUIT, { id });
+      const { result, run, stop } = await testSubscription(subscription);
+      expect(result()).to.eql({ data: { fruit: { _id: id, name } } });
+      expect(
+        await run(() => Fruits.update(id, { $set: { name: 'avocado' } })),
+      ).to.eql({ data: { fruit: { _id: id, name: 'avocado' } } });
+      expect(
+        await run(() => Fruits.remove(id)),
+      ).to.eql({ data: { fruit: null } });
+      await stop();
+      expect(Fruits.find().count()).to.equal(0);
+    });
+
     it('removes documents when subscription is stopped', async () => {
       const fruits = [
         'avocado',

@@ -46,25 +46,7 @@ function resolveFields(field, args, value, selectedFields) {
     });
 }
 
-function singleObjectResolver(resolve, field) {
-  return (...args) => {
-    const cursor = resolve(...args);
-    const { meteorSubscription } = args[2] || {};
-    if (cursor) {
-      const selectedFields = args[3].fieldNodes.map((n) => n.name.value);
-      const { collectionName } = cursor._cursorDescription;
-      const doc = cursor.fetch()[0];
-      if (doc && meteorSubscription) {
-        meteorSubscription.added(collectionName, doc._id, pick(doc, selectedFields));
-        resolveFields(field, args, doc, selectedFields);
-      }
-      return doc;
-    }
-    return cursor;
-  };
-}
-
-function listOfObjectsResolver(resolve, field) {
+function createResolver(resolve, field, isSingle) {
   return (...args) => {
     const cursor = resolve(...args);
     const { meteorSubscription } = args[2] || {};
@@ -73,12 +55,14 @@ function listOfObjectsResolver(resolve, field) {
       return cursor;
     }
     if (!meteorSubscription) {
-      return cursor.fetch();
+      const result = cursor.fetch();
+      return isSingle ? result[0] : result;
     }
 
-    const selectedFields = (
-      args[3].fieldNodes[0]?.selectionSet?.selections || []
-    ).map((selection) => selection.name.value);
+    const selectionSet = args[3].fieldNodes[0]?.selectionSet;
+    const selectedFields = selectionSet
+      ? (selectionSet.selections || []).map((selection) => selection.name.value)
+      : args[3].fieldNodes.map((node) => node.name.value);
     const { collectionName } = cursor._cursorDescription;
     const initialResult = [];
     const publishedIds = new Set();
@@ -113,8 +97,7 @@ function listOfObjectsResolver(resolve, field) {
       publishedIds.clear();
     });
 
-    // TODO: remove initialResult array after it is returned
-    return initialResult;
+    return isSingle ? initialResult[0] : initialResult;
   };
 }
 
@@ -160,10 +143,10 @@ class CursorDirective extends SchemaDirectiveVisitor {
 
     if (isSingleObject(this.schema, type)) {
       // eslint-disable-next-line no-param-reassign
-      field.resolve = singleObjectResolver(resolve, field);
+      field.resolve = createResolver(resolve, field, true);
     } else if (isListOfObjects(this.schema, type)) {
       // eslint-disable-next-line no-param-reassign
-      field.resolve = listOfObjectsResolver(resolve, field);
+      field.resolve = createResolver(resolve, field, false);
     } else {
       throw new Error(`@cursor directive only works with object types but got ${field.type}`);
     }

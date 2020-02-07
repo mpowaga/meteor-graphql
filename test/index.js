@@ -28,6 +28,7 @@ export const typeDefs = `
     hello: String!
     allFruits: [Fruit] @cursor
     selectedFruits(selection: [String!]!): [Fruit] @cursor
+    fruit(id: ID!): Fruit @cursor
     allEntries: [Entry!] @cursor
   }
 
@@ -59,6 +60,9 @@ export const resolvers = {
     },
     selectedFruits(_, { selection }) {
       return Fruits.find({ name: { $in: selection } });
+    },
+    fruit(_, { id }) {
+      return Fruits.find(id);
     },
     allEntries() {
       return Entries.find();
