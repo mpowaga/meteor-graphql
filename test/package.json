@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "pretest": "DETECT_CHROMEDRIVER_VERSION=true meteor npm install chromedriver --no-save",
     "test": "METEOR_PACKAGE_DIRS=.. meteor test-packages --driver-package meteortesting:mocha ../"
   },
   "dependencies": {
@@ -13,7 +14,6 @@
   },
   "devDependencies": {
     "chai": "^4.2.0",
-    "chromedriver": "^78.0.1",
     "selenium-webdriver": "^3.6.0",
     "sinon": "^8.1.1"
   }
