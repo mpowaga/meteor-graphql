@@ -1,0 +1,14 @@
+{
+  "groups": {
+    "package": {
+      "packages": [
+        "package.json"
+      ]
+    },
+    "test": {
+      "packages": [
+        "test/package.json"
+      ]
+    }
+  }
+}
