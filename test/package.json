@@ -9,7 +9,7 @@
   "dependencies": {
     "@babel/runtime": "^7.9.0",
     "graphql": "^14.6.0",
-    "graphql-tools": "^4.0.7",
+    "graphql-tools": "^4.0.8",
     "meteor-node-stubs": "^1.0.0"
   },
   "devDependencies": {
