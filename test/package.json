@@ -7,7 +7,7 @@
     "test": "METEOR_PACKAGE_DIRS=.. meteor test-packages --driver-package meteortesting:mocha ../"
   },
   "dependencies": {
-    "@babel/runtime": "^7.9.0",
+    "@babel/runtime": "^7.9.2",
     "graphql": "^14.7.0",
     "graphql-tools": "^4.0.7",
     "meteor-node-stubs": "^1.0.0"
