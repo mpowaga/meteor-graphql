@@ -33,12 +33,14 @@ function findSelection(fieldNodes, field) {
 
 function resolveFields(field, args, value, selectedFields) {
   Object.values(getTypeFields(field.type))
-    .filter((f) =>
-      f != null
-      && typeof f.resolve === 'function'
-      && Array.isArray(f.astNode.directives)
-      && f.astNode.directives.some(({ name }) => name.value === 'cursor')
-      && selectedFields.includes(f.name))
+    .filter(
+      (f) =>
+        f != null &&
+        typeof f.resolve === 'function' &&
+        Array.isArray(f.astNode.directives) &&
+        f.astNode.directives.some(({ name }) => name.value === 'cursor') &&
+        selectedFields.includes(f.name),
+    )
     .forEach((f) => {
       const resolveArgs = [value].concat(args.slice(1));
       resolveArgs[3].fieldNodes = findSelection(resolveArgs[3].fieldNodes, f);
@@ -71,7 +73,11 @@ function createResolver(resolve, field, isSingle) {
     const handle = cursor.observeChanges({
       added(id, fields) {
         const value = { _id: id, ...fields };
-        meteorSubscription.added(collectionName, id, pick(fields, selectedFields));
+        meteorSubscription.added(
+          collectionName,
+          id,
+          pick(fields, selectedFields),
+        );
         resolveFields(field, args, value, selectedFields);
         if (initializing) {
           initialResult.push(value);
@@ -80,9 +86,14 @@ function createResolver(resolve, field, isSingle) {
       },
       changed(id, fields) {
         const changedFields = selectedFields.filter((name) =>
-          Object.prototype.hasOwnProperty.call(fields, name));
+          Object.prototype.hasOwnProperty.call(fields, name),
+        );
         const value = { _id: id, ...fields };
-        meteorSubscription.changed(collectionName, id, pick(fields, changedFields));
+        meteorSubscription.changed(
+          collectionName,
+          id,
+          pick(fields, changedFields),
+        );
         resolveFields(field, args, value, changedFields);
       },
       removed(id) {
@@ -93,7 +104,9 @@ function createResolver(resolve, field, isSingle) {
     initializing = false;
     meteorSubscription.onStop(() => {
       handle.stop();
-      publishedIds.forEach((id) => meteorSubscription.removed(collectionName, id));
+      publishedIds.forEach((id) =>
+        meteorSubscription.removed(collectionName, id),
+      );
       publishedIds.clear();
     });
 
@@ -117,7 +130,9 @@ function isSingleObject(schema, type) {
   if (type.kind === 'NonNullType') {
     return isSingleObject(schema, type.type);
   }
-  return type.kind === 'NamedType' && isObjectType(schema.getType(type.name.value));
+  return (
+    type.kind === 'NamedType' && isObjectType(schema.getType(type.name.value))
+  );
 }
 
 /*
@@ -139,7 +154,10 @@ function isListOfObjects(schema, type) {
 
 class CursorDirective extends SchemaDirectiveVisitor {
   visitFieldDefinition(field) {
-    const { resolve, astNode: { type } } = field;
+    const {
+      resolve,
+      astNode: { type },
+    } = field;
 
     if (isSingleObject(this.schema, type)) {
       // eslint-disable-next-line no-param-reassign
@@ -148,7 +166,9 @@ class CursorDirective extends SchemaDirectiveVisitor {
       // eslint-disable-next-line no-param-reassign
       field.resolve = createResolver(resolve, field, false);
     } else {
-      throw new Error(`@cursor directive only works with object types but got ${field.type}`);
+      throw new Error(
+        `@cursor directive only works with object types but got ${field.type}`,
+      );
     }
   }
 }

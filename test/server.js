@@ -3,21 +3,11 @@
 import { Meteor } from 'meteor/meteor';
 import { expect } from 'chai';
 import MeteorGraphQLServer from 'meteor/meteorengineer:graphql';
-import {
-  Fruits,
-  Users,
-  Entries,
-  typeDefs,
-  resolvers,
-} from './index';
+import { Fruits, Users, Entries, typeDefs, resolvers } from './index';
 
 Meteor.methods({
   'test.resetDatabase': () => {
-    [
-      Fruits,
-      Users,
-      Entries,
-    ].forEach((collection) => collection.remove({}));
+    [Fruits, Users, Entries].forEach((collection) => collection.remove({}));
   },
 });
 
@@ -30,10 +20,13 @@ new MeteorGraphQLServer({
 describe('MeteorGraphQLServer', () => {
   describe('@cursor directive', () => {
     it('throws if used with scalar type', () => {
-      expect(() => new MeteorGraphQLServer({
-        typeDefs: 'type Foo { field: String @cursor }',
-        resolvers: {},
-      })).to.throw();
+      expect(
+        () =>
+          new MeteorGraphQLServer({
+            typeDefs: 'type Foo { field: String @cursor }',
+            resolvers: {},
+          }),
+      ).to.throw();
     });
   });
 });
