@@ -6,14 +6,18 @@ import { graphql } from 'graphql';
 import { SchemaDirectiveVisitor } from 'graphql-tools';
 import { makeExecutableSchema } from './index';
 
-
 class CursorDirective extends SchemaDirectiveVisitor {
   // eslint-disable-next-line class-methods-use-this
   visitFieldDefinition(field) {
-    const { resolve, astNode: { type } } = field;
+    const {
+      resolve,
+      astNode: { type },
+    } = field;
 
-    if (type.kind === 'NamedType'
-      || (type.kind === 'NonNullType' && type.type.kind === 'NamedType')) {
+    if (
+      type.kind === 'NamedType' ||
+      (type.kind === 'NonNullType' && type.type.kind === 'NamedType')
+    ) {
       // eslint-disable-next-line no-param-reassign
       field.resolve = (...args) => {
         const cursor = resolve(...args);
@@ -80,24 +84,28 @@ export default class MeteorGraphQLClient {
   subscribe(query, variables) {
     const params = { query, variables };
     const existing = this._subscriptions.find((sub) =>
-      EJSON.equals(sub.params, params));
+      EJSON.equals(sub.params, params),
+    );
 
     if (existing) {
       return existing.handle;
     }
 
-    const handle = Tracker.nonreactive(() =>
-      new Subscription({ schema: this._schema, ...params }));
+    const handle = Tracker.nonreactive(
+      () => new Subscription({ schema: this._schema, ...params }),
+    );
     this._subscriptions.push({ params, handle });
 
     return handle;
   }
 
-  query = (query, variables) => new Promise((resolve, reject) =>
-    Meteor.call('/graphql', { query, variables }, (err, result) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve(result);
-    }))
+  query = (query, variables) =>
+    new Promise((resolve, reject) =>
+      Meteor.call('/graphql', { query, variables }, (err, result) => {
+        if (err) {
+          return reject(err);
+        }
+        return resolve(result);
+      }),
+    );
 }
