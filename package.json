@@ -19,8 +19,8 @@
     "eslint-plugin-jsx-a11y": "^6.2.3",
     "eslint-plugin-meteor": "^6.0.0",
     "eslint-plugin-react": "^7.19.0",
-    "husky": "^4.3.0",
-    "lint-staged": "^10.4.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.1",
     "prettier": "^2.1.2"
   },
   "husky": {
